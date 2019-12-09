@@ -21,7 +21,7 @@
 glm::mat4	proj = glm::mat4(1.0f);
 glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
-
+glm::mat4   m2 = glm::mat4(1.0f); //matriz modelo para el segundo cubo 
 
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
@@ -173,6 +173,7 @@ void initShader(const char *vname, const char *fname)
 	glAttachShader(program, fshader);
 	glLinkProgram(program);
 
+	//comprobacion de errores en el enlazado de shader al programa
 	int linked;
 	glGetProgramiv(program, GL_LINK_STATUS, &linked);
 	if (!linked)
@@ -208,13 +209,11 @@ void initObj()
 
 	glGenBuffers(1, &posVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, posVBO);
-	glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
-		cubeVertexPos, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3, cubeVertexPos, GL_STATIC_DRAW);
 
 	glGenBuffers(1, &colorVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-	glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
-		cubeVertexColor, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3, cubeVertexColor, GL_STATIC_DRAW);
 
 
 	if (inPos != -1)
@@ -233,8 +232,7 @@ void initObj()
 	{
 		glGenBuffers(1, &normalVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
-		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
-			cubeVertexNormal, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,cubeVertexNormal, GL_STATIC_DRAW);
 		glVertexAttribPointer(inNormal, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inNormal);
 	}
@@ -242,19 +240,17 @@ void initObj()
 	{
 		glGenBuffers(1, &texCoordVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, texCoordVBO);
-		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 2,
-			cubeVertexTexCoord, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 2,cubeVertexTexCoord, GL_STATIC_DRAW);
 		glVertexAttribPointer(inTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inTexCoord);
 	}
 
 	glGenBuffers(1, &triangleIndexVBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleIndexVBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-		cubeNTriangleIndex * sizeof(unsigned int) * 3, cubeTriangleIndex,
-		GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,cubeNTriangleIndex * sizeof(unsigned int) * 3, cubeTriangleIndex,GL_STATIC_DRAW);
 
 	model = glm::mat4(1.0f);
+	m2 = glm::mat4(1.0f);
 
 }
 
@@ -266,8 +262,7 @@ GLuint loadShader(const char *fileName, GLenum type)
 	//Creación y compilación del Shader
 	GLuint shader;
 	shader = glCreateShader(type);
-	glShaderSource(shader, 1,
-		(const GLchar * *)& source, (const GLint*)& fileLen);
+	glShaderSource(shader, 1, (const GLchar * *)& source, (const GLint*)& fileLen);
 	glCompileShader(shader);
 	delete[] source;
 	
@@ -299,42 +294,31 @@ void renderFunc()
 	glUseProgram(program);
 
 	glm::mat4 modelView = view * model;
-	glm::mat4 modelViewProj = proj * view * model;
+	glm::mat4 modelViewProj = proj * modelView;
 	glm::mat4 normal = glm::transpose(glm::inverse(modelView));
 	if (uModelViewMat != -1)
-		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,
-			&(modelView[0][0]));
+		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
 	if (uModelViewProjMat != -1)
-		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,
-			&(modelViewProj[0][0]));
+		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
 	if (uNormalMat != -1)
-		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,
-			&(normal[0][0]));
+		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,	&(normal[0][0]));
 
 	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
-		GL_UNSIGNED_INT, (void*)0);
-
-
-	glm::mat4 m2(1);
-	m2[3].x = 4.0f;
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+	
 	modelView = view * m2;
 	modelViewProj = proj * modelView;
 	normal = glm::transpose(glm::inverse(modelView));
 
 
 	if (uModelViewMat != -1)
-		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,
-			&(modelView[0][0]));
+		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,&(modelView[0][0]));
 	if (uModelViewProjMat != -1)
-		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,
-			&(modelViewProj[0][0]));
+		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,&(modelViewProj[0][0]));
 	if (uNormalMat != -1)
-		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,
-			&(normal[0][0]));
+		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,&(normal[0][0]));
 
-	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
-		GL_UNSIGNED_INT, (void*)0);
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 
 	glutSwapBuffers();
 }
@@ -351,6 +335,17 @@ void idleFunc()
 	static float angle = 0.0f;
 	angle = (angle > 3.141592f * 2.0f) ? 0 : angle + 0.01f;
 	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
+	glutPostRedisplay();
+
+	m2 = glm::mat4(1.0f);
+	//rotacion sobre eje y
+	m2 = glm::rotate(m2, angle, glm::vec3(0, 4, 0));
+
+	//translacion sobre x para desplazar el cuadrado
+	m2 = glm::translate(m2, glm::vec3(3, 0, 0));
+
+	//rotacion sobre Y para simular la orbitacion del objeto
+	m2 = glm::rotate(m2, angle, glm::vec3(0, 1, 0));
 
 	glutPostRedisplay();
 }
