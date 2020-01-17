@@ -340,6 +340,10 @@ void renderFunc()
 }
 void resizeFunc(int width, int height)
 {
+	float aspectRatio = (float)width / (float)height;
+
+	proj = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 50.0f);
+
 	glViewport(0, 0, width, height);
 	
 	glutPostRedisplay();
