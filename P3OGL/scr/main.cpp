@@ -22,6 +22,11 @@ glm::mat4	proj = glm::mat4(1.0f);
 glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
 
+//Traslación por teclado
+float displacement = 0.1f;
+//Giro de cámara por teclado
+float yaw_angle = 0.01f;
+
 
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
@@ -355,7 +360,41 @@ void idleFunc()
 	glutPostRedisplay();
 }
 
-void keyboardFunc(unsigned char key, int x, int y){}
+void keyboardFunc(unsigned char key, int x, int y)
+{
+	std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
+
+	glm::mat4 rotation(1.0f);
+
+	switch (key)
+	{
+	case 'w':
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, displacement));
+		break;
+	case 's':
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -displacement));
+		break;
+	case 'a':
+		view = glm::translate(view, glm::vec3(displacement, 0.0f, 0.0f));
+		break;
+	case 'd':
+		view = glm::translate(view, glm::vec3(-displacement, 0.0f, 0.0f));
+		break;
+	case 'q':
+		rotation = glm::rotate(rotation, -yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		view = rotation * view;
+		break;
+	case 'e':
+		rotation = glm::rotate(rotation, yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		view = rotation * view;
+		break;
+	default:
+		break;
+	}
+
+	glutPostRedisplay();
+
+}
 void mouseFunc(int button, int state, int x, int y){}
 
 

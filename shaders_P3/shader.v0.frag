@@ -10,6 +10,8 @@ in vec2 texCoord;
 uniform sampler2D colorTex;
 uniform sampler2D emiTex;
 
+uniform mat4 view;
+
 //Propiedades del objeto
 vec3 Ka;
 vec3 Kd;
@@ -22,7 +24,8 @@ vec3 Ke;
 vec3 Ia = vec3 (0.3);
 vec3 Id = vec3 (1.0);
 vec3 Is = vec3 (1.0);
-vec3 lpos = vec3 (0.0); 
+//vec3 lpos = vec3(0.0);
+vec3 lpos = (view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
 
 vec3 shade();
