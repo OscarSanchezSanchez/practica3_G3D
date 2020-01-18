@@ -7,6 +7,9 @@ in vec3 pos;
 in vec3 norm;
 in vec2 texCoord;
 
+in vec3 Pos;
+in vec3 Luz;
+
 uniform sampler2D colorTex;
 uniform sampler2D emiTex;
 
@@ -19,10 +22,14 @@ float alpha = 5000.0;
 vec3 Ke;
 
 //Propiedades de la luz
-vec3 Ia = vec3 (0.3);
+//vec3 Ia = vec3 (0.3);
+//Añadimos el nuevo valor a la intensidad de luz ambiental
+vec3 Ia = Luz;
 vec3 Id = vec3 (1.0);
 vec3 Is = vec3 (1.0);
-vec3 lpos = vec3 (0.0); 
+//vec3 lpos = vec3 (0.0); 
+//Añadimos la nueva posición a la luz
+vec3 lpos = Pos; 
 
 vec3 shade();
 
