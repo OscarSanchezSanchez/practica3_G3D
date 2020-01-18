@@ -23,6 +23,19 @@ glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
 glm::mat4   m2 = glm::mat4(1.0f); //matriz modelo para el segundo cubo 
 
+//Traslaciï¿½n por teclado
+float displacement = 0.1f;
+//Giro de cï¿½mara por teclado
+float yaw_angle = 0.01f;
+
+//Movimiento de cï¿½mara con el ratï¿½n
+const float orbitAngle = 0.1f;
+float lastX = 0.0f;
+float lastY = 0.0f;
+float yaw = 0.0f;
+float pitch = 0.0f;
+
+
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
@@ -56,14 +69,15 @@ unsigned int triangleIndexVBO;
 //////////////////////////////////////////////////////////////
 //!!Por implementar
 
-//Declaración de CB
+//Declaraciï¿½n de CB
 void renderFunc();
 void resizeFunc(int width, int height);
 void idleFunc();
 void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int button, int state, int x, int y);
+void mouseMotionFunc(int x, int y);
 
-//Funciones de inicialización y destrucción
+//Funciones de inicializaciï¿½n y destrucciï¿½n
 void initContext(int argc, char** argv);
 void initOGL();
 void initShader(const char *vname, const char *fname);
@@ -108,7 +122,7 @@ void initContext(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(0, 0);
-	glutCreateWindow("Prácticas OGL");
+	glutCreateWindow("Prï¿½cticas OGL");
 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
@@ -124,6 +138,7 @@ void initContext(int argc, char** argv)
 	glutIdleFunc(idleFunc);
 	glutKeyboardFunc(keyboardFunc);
 	glutMouseFunc(mouseFunc);
+	glutMotionFunc(mouseMotionFunc);
 
 	
 
@@ -259,7 +274,7 @@ GLuint loadShader(const char *fileName, GLenum type)
 	unsigned int fileLen;
 	char* source = loadStringFromFile(fileName, fileLen);
 	//////////////////////////////////////////////
-	//Creación y compilación del Shader
+	//Creaciï¿½n y compilaciï¿½n del Shader
 	GLuint shader;
 	shader = glCreateShader(type);
 	glShaderSource(shader, 1, (const GLchar * *)& source, (const GLint*)& fileLen);
@@ -267,7 +282,7 @@ GLuint loadShader(const char *fileName, GLenum type)
 	delete[] source;
 	
 
-	//Comprobamos que se compiló bien
+	//Comprobamos que se compilï¿½ bien
 	GLint compiled;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 	if (!compiled)
@@ -354,14 +369,71 @@ void idleFunc()
 	glutPostRedisplay();
 }
 
-void keyboardFunc(unsigned char key, int x, int y){}
-void mouseFunc(int button, int state, int x, int y){}
+void keyboardFunc(unsigned char key, int x, int y)
+{
+	std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
 
+	glm::mat4 rotation(1.0f);
 
+	switch (key)
+	{
+	case 'w':
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, displacement));
+		break;
+	case 's':
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -displacement));
+		break;
+	case 'a':
+		view = glm::translate(view, glm::vec3(displacement, 0.0f, 0.0f));
+		break;
+	case 'd':
+		view = glm::translate(view, glm::vec3(-displacement, 0.0f, 0.0f));
+		break;
+	case 'q':
+		rotation = glm::rotate(rotation, -yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		view = rotation * view;
+		break;
+	case 'e':
+		rotation = glm::rotate(rotation, yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		view = rotation * view;
+		break;
+	default:
+		break;
+	}
 
+	glutPostRedisplay();
 
+}
 
+void mouseFunc(int button, int state, int x, int y)
+{
+	if (state == 0)
+		std::cout << "Se ha pulsado el boton ";
+	else
+		std::cout << "Se ha soltado el boton ";
 
+	if (button == 0) std::cout << "de la izquierda del raton " << std::endl;
+	if (button == 1) std::cout << "central del raton " << std::endl;
+	if (button == 2) std::cout << "de la derecha del raton " << std::endl;
 
+	std::cout << "en la posicion " << x << " " << y << std::endl << std::endl;
+}
 
+void mouseMotionFunc(int x, int y)
+{
 
+	float xOffset = (float)x - lastX;
+	float yOffset = (float)y - lastY;
+
+	lastX = (float)x;
+	lastY = (float)y;
+
+	yaw += xOffset;
+	pitch += yOffset;
+
+	glm::mat4 rotation(1.0f);
+
+	view = glm::rotate(view, orbitAngle, glm::vec3(yaw, pitch, 0.0));
+
+	glutPostRedisplay();
+}
