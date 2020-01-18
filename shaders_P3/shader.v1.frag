@@ -26,8 +26,8 @@ vec3 Ke;
 //vec3 Ia = vec3 (0.3);
 //Añadimos el nuevo valor a la intensidad de luz ambiental
 vec3 Ia = lIntensity;
-vec3 Id = vec3 (1.0);
-vec3 Is = vec3 (1.0); 
+vec3 Id = vec3 (0.0, 1.0, 0.0);
+vec3 Is = vec3 (0.0, 1.0, 0.0); 
 
 //Añadimos la nueva posición a la luz
 vec3 lpos = lPosition; 

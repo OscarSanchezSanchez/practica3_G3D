@@ -437,9 +437,14 @@ void renderFunc()
 }
 void resizeFunc(int width, int height)
 {
+	float aspectRatio = (float)width / (float)height;
+
+	proj = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 50.0f);
+
 	glViewport(0, 0, width, height);
 
 	glutPostRedisplay();
+
 }
 
 void idleFunc()
@@ -504,10 +509,10 @@ void keyboardFunc(unsigned char key, int x, int y)
         lightPosition.y -= displacementLight;
         break;
 	case 'h':
-		lightPosition.x += displacementLight;
+		lightPosition.x -= displacementLight;
 		break;
 	case 'k':
-		lightPosition.x -= displacementLight;
+		lightPosition.x += displacementLight;
 		break;
     default:
         break;
