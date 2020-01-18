@@ -1,4 +1,4 @@
-#include "BOX.h"
+﻿#include "BOX.h"
 #include "auxiliar.h"
 
 
@@ -40,6 +40,13 @@ float pitch = 0.0f;
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
+//Texturas  
+unsigned int colorTexId;  
+unsigned int emiTexId;
+
+unsigned int vshader;
+unsigned int fshader;
+unsigned int program;
 struct program
 {
 	unsigned int vshader;
@@ -60,6 +67,17 @@ struct uniform
 };
 
 std::vector<uniform> uniforms(2);
+
+//Variables uniformes posición e intesidad de la luz
+int uLPos;
+int uILuz;
+
+glm::vec3 lPos;
+glm::vec3 iLuz;
+
+//Texturas Uniform  
+int uColorTex;  
+int uEmiTex;
 
 //Atributos
 int inPos;
@@ -82,7 +100,7 @@ unsigned int triangleIndexVBO;
 //////////////////////////////////////////////////////////////
 //!!Por implementar
 
-//Declaraci�n de CB
+//Declaración de CB
 void renderFunc();
 void resizeFunc(int width, int height);
 void idleFunc();
@@ -90,7 +108,7 @@ void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int button, int state, int x, int y);
 void mouseMotionFunc(int x, int y);
 
-//Funciones de inicializaci�n y destrucci�n
+//Funciones de inicialización y destrucción
 void initContext(int argc, char** argv);
 void initOGL();
 void initShader(const char *vname, const char *fname, struct program *program, struct uniform *uniform);
@@ -128,8 +146,8 @@ int main(int argc, char** argv)
 	
 //////////////////////////////////////////
 // Funciones auxiliares 
-void initContext(int argc, char** argv)
-{
+void initContext(int argc, char** argv){
+
 	glutInit(&argc, argv);
 	glutInitContextVersion(3, 3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
@@ -137,7 +155,7 @@ void initContext(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(0, 0);
-	glutCreateWindow("Pr�cticas OGL");
+	glutCreateWindow("Prácticas OGL");
 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
@@ -156,9 +174,8 @@ void initContext(int argc, char** argv)
 	glutMotionFunc(mouseMotionFunc);
 
 }
+void initOGL(){
 
-void initOGL()
-{
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 
@@ -172,6 +189,7 @@ void initOGL()
 	view[3].z = -10.0f;
 
 }
+void destroy(){
 
 
 void destroy()
@@ -194,7 +212,11 @@ void destroy()
 	glDeleteBuffers(1, &triangleIndexVBO);
 	glDeleteVertexArrays(1, &vao);
 
+	glDeleteTextures(1, &colorTexId);  
+	glDeleteTextures(1, &emiTexId);
+
 }
+void initShader(const char *vname, const char *fname){
 
 void initShader(const char *vname, const char *fname, struct program *program, struct uniform *uniform)
 {
@@ -227,15 +249,29 @@ void initShader(const char *vname, const char *fname, struct program *program, s
 	uniform->uModelViewMat = glGetUniformLocation(program->program, "modelView");
 	uniform->uModelViewProjMat = glGetUniformLocation(program->program, "modelViewProj");
 
-	inPos = glGetAttribLocation(program->program, "inPos");
-	inColor = glGetAttribLocation(program->program, "inColor");
-	inNormal = glGetAttribLocation(program->program, "inNormal");
-	inTexCoord = glGetAttribLocation(program->program, "inTexCoord");
+	uColorTex = glGetUniformLocation(program, "colorTex");  
+	uEmiTex = glGetUniformLocation(program, "emiTex");
+
+	uLPos = glGetUniformLocation(program, "lPos");
+	uILuz = glGetUniformLocation(program, "iLuz");
+
+	inPos = glGetAttribLocation(program, "inPos");
+	inColor = glGetAttribLocation(program, "inColor");
+	inNormal = glGetAttribLocation(program, "inNormal");
+	inTexCoord = glGetAttribLocation(program, "inTexCoord");
+
+	glUseProgram(program);
+	if (uColorTex != -1) {
+		glUniform1i(uColorTex, 0);
+	}
+
+	if (uEmiTex != -1) {
+		glUniform1i(uEmiTex, 1);
+	}
 
 }
+void initObj(){
 
-void initObj()
-{
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
@@ -251,13 +287,19 @@ void initObj()
 
 	if (inPos != -1)
 	{
+		glGenBuffers(1, &posVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, posVBO);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
+			cubeVertexPos, GL_STATIC_DRAW);
 		glVertexAttribPointer(inPos, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inPos);
 	}
 	if (inColor != -1)
 	{
+		glGenBuffers(1, &colorVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
+			cubeVertexColor, GL_STATIC_DRAW);
 		glVertexAttribPointer(inColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inColor);
 	}
@@ -277,30 +319,35 @@ void initObj()
 		glVertexAttribPointer(inTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inTexCoord);
 	}
+	if (inLPos != -1)
+	{
+
+	}
 
 	glGenBuffers(1, &triangleIndexVBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleIndexVBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,cubeNTriangleIndex * sizeof(unsigned int) * 3, cubeTriangleIndex,GL_STATIC_DRAW);
 
+	colorTexId = loadTex("../img/color2.png");  
+	emiTexId = loadTex("../img/emissive.png");
 	models[0] = glm::mat4(1.0f);
 	models[1] = glm::mat4(1.0f);
 
 }
 
-GLuint loadShader(const char *fileName, GLenum type)
-{ 
+GLuint loadShader(const char *fileName, GLenum type){ 
+
 	unsigned int fileLen;
 	char* source = loadStringFromFile(fileName, fileLen);
 	//////////////////////////////////////////////
-	//Creaci�n y compilaci�n del Shader
+	//Creación y compilación del Shader
 	GLuint shader;
 	shader = glCreateShader(type);
 	glShaderSource(shader, 1, (const GLchar * *)& source, (const GLint*)& fileLen);
 	glCompileShader(shader);
 	delete[] source;
-	
 
-	//Comprobamos que se compil� bien
+	//Comprobamos que se compiló bien
 	GLint compiled;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 	if (!compiled)
@@ -316,9 +363,40 @@ GLuint loadShader(const char *fileName, GLenum type)
 		glDeleteShader(shader);
 		exit(-1);
 	}
+
 	return shader; 
 }
-unsigned int loadTex(const char *fileName){ return 0; }
+
+unsigned int loadTex(const char *fileName){ 
+	unsigned char* map;  
+	unsigned int w, h;  
+	map = loadTexture(fileName, w, h);
+
+	if (!map) { 
+		std::cout << "Error cargando el fichero: " 
+			<< fileName << std::endl;  
+		exit(-1); 
+	}
+
+	unsigned int texId;  
+	glGenTextures(1, &texId);  
+	glBindTexture(GL_TEXTURE_2D, texId); 
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, 
+		GL_UNSIGNED_BYTE, (GLvoid*)map);
+
+	delete[] map;
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+		GL_LINEAR_MIPMAP_LINEAR);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+
+	return texId;
+
+}
 
 void renderFunc()
 {
@@ -326,7 +404,6 @@ void renderFunc()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	for (size_t i = 0; i < programs.size(); i++)
 	{
-	
 		glUseProgram(programs[i].program);
 
 		glm::mat4 modelView = view * models[i];
@@ -341,6 +418,40 @@ void renderFunc()
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+	//Texturas  
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, colorTexId);
+
+	glActiveTexture(GL_TEXTURE0 + 1);
+	glBindTexture(GL_TEXTURE_2D, emiTexId);
+	
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+		GL_UNSIGNED_INT, (void*)0);
+
+	glm::mat4 m2(1);
+	m2[3].x = 4.0f;
+	modelView = view * m2;
+	modelViewProj = proj * modelView;
+	normal = glm::transpose(glm::inverse(modelView));
+
+	if (uModelViewMat != -1)
+		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,
+			&(modelView[0][0]));
+	if (uModelViewProjMat != -1)
+		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,
+			&(modelViewProj[0][0]));
+	if (uNormalMat != -1)
+		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,
+			&(normal[0][0]));
+	if(uILuz != -1)
+		glUniform3fv(uILuz, 1, &iLuz[0]);
+	if (uLPos != -1)
+		glUniform3fv(uLPos, 1, &lPos[0]);
+
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+		GL_UNSIGNED_INT, (void*)0);
 
 	}
 	glutSwapBuffers();
@@ -348,14 +459,11 @@ void renderFunc()
 }
 void resizeFunc(int width, int height)
 {
-	float aspectRatio = (float)width / (float)height;
-
-	proj = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 50.0f);
-
 	glViewport(0, 0, width, height);
-	
+
 	glutPostRedisplay();
 }
+void idleFunc(){
 
 void idleFunc()
 {
@@ -377,10 +485,24 @@ void idleFunc()
 
 	glutPostRedisplay();
 }
-
-void keyboardFunc(unsigned char key, int x, int y)
-{
+void keyboardFunc(unsigned char key, int x, int y){
 	std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
+
+	if (key == 'l') {
+		iLuz = glm::min(iLuz + glm::vec3(0.1f), glm::vec3(1.0f));
+	}
+	if (key == 'm') {
+		iLuz = glm::min(iLuz - glm::vec3(0.1f), glm::vec3(1.0f));
+	}
+	if (key == 'u') {
+		lPos.x += 0.1;
+	}
+	if (key == 'j') {
+		lPos.x -= 0.1;
+	}
+
+}
+void mouseFunc(int button, int state, int x, int y){}
 
 	glm::mat4 rotation(1.0f);
 
