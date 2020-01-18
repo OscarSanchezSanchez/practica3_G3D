@@ -5,9 +5,9 @@ layout(location = 1)in vec3 inColor;
 layout(location = 3)in vec2 inTexCoord;
 layout(location = 2)in vec3 inNormal;
 
-//Recogemos las nuevas variables uniform
-uniform vec3 lPos;
-uniform vec3 iLuz;
+//Uniform light
+uniform vec3 lightPosition;
+uniform vec3 lightIntensity;
 
 uniform mat4 modelViewProj;
 uniform mat4 modelView;
@@ -18,17 +18,17 @@ out vec3 pos;
 out vec3 norm;
 out vec2 texCoord;
 
-//Sacamos los nuevos atributos
-out vec3 Pos;
-out vec3 Luz;
+//Out light
+out vec3 lPosition;
+out vec3 lIntensity;
 
 void main()
 {
 	color = inColor;
 	texCoord = inTexCoord;
 	//Le pasamos los valores
-	Pos = lPos;
-	Luz = iLuz;
+	lPosition = lightPosition;
+	lIntensity = lightIntensity;
 	norm = (normal * vec4(inNormal, 0.0)).xyz;
 	pos = (modelView * vec4(inPos, 1.0)).xyz;
 	
