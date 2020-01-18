@@ -56,10 +56,6 @@ int inColor;
 int inNormal;
 int inTexCoord;
 
-//Atributos posición e intesidad de la luz
-int inLPos;
-int inILuz;
-
 //VAO
 unsigned int vao;
 //VBOs que forman parte del objeto
@@ -434,7 +430,7 @@ void idleFunc(){
 }
 void keyboardFunc(unsigned char key, int x, int y){
 	std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
-	//glm::vec3 lightAmb = glm::min(lightAmb + glm::vec3(0.1f), glm::vec3(1.0f));
+
 	if (key == 'l') {
 		iLuz = glm::min(iLuz + glm::vec3(0.1f), glm::vec3(1.0f));
 	}
