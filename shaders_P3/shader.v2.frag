@@ -20,8 +20,8 @@ vec3 Ke;
 
 //Propiedades de la luz
 vec3 Ia = vec3 (0.3);
-vec3 Id = vec3 (1.0,0.0,0.0);
-vec3 Is = vec3 (1.0,0.0,0.0);
+vec3 Id = vec3 (0.0,1.0,0.0);
+vec3 Is = vec3 (0.0,1.0,0.0);
 vec3 lpos = vec3 (0.0); 
 
 
