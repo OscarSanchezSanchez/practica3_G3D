@@ -5,7 +5,6 @@ layout(location = 2)in vec3 inColor;
 layout(location = 3)in vec2 inTexCoord;
 layout(location = 1)in vec3 inNormal;
 
-
 uniform mat4 modelViewProj;
 uniform mat4 modelView;
 uniform mat4 normal;

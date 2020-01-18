@@ -11,6 +11,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
+#include <vector>
 
 
 //////////////////////////////////////////////////////////////
@@ -21,7 +22,7 @@
 glm::mat4	proj = glm::mat4(1.0f);
 glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
-glm::mat4   m2 = glm::mat4(1.0f); //matriz modelo para el segundo cubo 
+std::vector<glm::mat4> models(2);
 
 //Traslaci�n por teclado
 float displacement = 0.1f;
@@ -39,14 +40,26 @@ float pitch = 0.0f;
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
-unsigned int vshader;
-unsigned int fshader;
-unsigned int program;
+struct program
+{
+	unsigned int vshader;
+	unsigned int fshader;
+	unsigned int program;
+
+};
+
+std::vector<program> programs(2);
+
 
 //Variables Uniform
-int uModelViewMat;
-int uModelViewProjMat;
-int uNormalMat;
+struct uniform
+{
+	int uModelViewMat;
+	int uModelViewProjMat;
+	int uNormalMat;
+};
+
+std::vector<uniform> uniforms(2);
 
 //Atributos
 int inPos;
@@ -80,7 +93,7 @@ void mouseMotionFunc(int x, int y);
 //Funciones de inicializaci�n y destrucci�n
 void initContext(int argc, char** argv);
 void initOGL();
-void initShader(const char *vname, const char *fname);
+void initShader(const char *vname, const char *fname, struct program *program, struct uniform *uniform);
 void initObj();
 void destroy();
 
@@ -101,7 +114,9 @@ int main(int argc, char** argv)
 
 	initContext(argc, argv);
 	initOGL();
-	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag");
+	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag", &programs[0], &uniforms[0]);
+	initShader("../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag", &programs[1], &uniforms[1]);
+
 	initObj();
 
 	glutMainLoop();
@@ -140,8 +155,6 @@ void initContext(int argc, char** argv)
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(mouseMotionFunc);
 
-	
-
 }
 
 void initOGL()
@@ -163,11 +176,16 @@ void initOGL()
 
 void destroy()
 {
-	glDetachShader(program, vshader);
-	glDetachShader(program, fshader);
-	glDeleteShader(vshader);
-	glDeleteShader(fshader);
-	glDeleteProgram(program);
+	glDetachShader(programs[0].program, programs[0].vshader);
+	glDetachShader(programs[0].program, programs[0].fshader);
+	glDeleteShader(programs[0].vshader);
+	glDeleteShader(programs[0].fshader);
+	glDeleteProgram(programs[0].program);
+	glDetachShader(programs[1].program, programs[1].vshader);
+	glDetachShader(programs[1].program, programs[1].fshader);
+	glDeleteShader(programs[1].vshader);
+	glDeleteShader(programs[1].fshader);
+	glDeleteProgram(programs[1].program);
 
 	if (inPos != -1) glDeleteBuffers(1, &posVBO);
 	if (inColor != -1) glDeleteBuffers(1, &colorVBO);
@@ -178,41 +196,41 @@ void destroy()
 
 }
 
-void initShader(const char *vname, const char *fname)
+void initShader(const char *vname, const char *fname, struct program *program, struct uniform *uniform)
 {
-	vshader = loadShader(vname, GL_VERTEX_SHADER);
-	fshader = loadShader(fname, GL_FRAGMENT_SHADER);
+	program->vshader = loadShader(vname, GL_VERTEX_SHADER);
+	program->fshader = loadShader(fname, GL_FRAGMENT_SHADER);
 
-	program = glCreateProgram();
-	glAttachShader(program, vshader);
-	glAttachShader(program, fshader);
-	glLinkProgram(program);
+	program->program = glCreateProgram();
+	glAttachShader(program->program, program->vshader);
+	glAttachShader(program->program, program->fshader);
+	glLinkProgram(program->program);
 
 	//comprobacion de errores en el enlazado de shader al programa
 	int linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	glGetProgramiv(program->program, GL_LINK_STATUS, &linked);
 	if (!linked)
 	{
 		//Calculamos una cadena de error
 		GLint logLen;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
+		glGetProgramiv(program->program, GL_INFO_LOG_LENGTH, &logLen);
 		char* logString = new char[logLen];
-		glGetProgramInfoLog(program, logLen, NULL, logString);
+		glGetProgramInfoLog(program->program, logLen, NULL, logString);
 		std::cout << "Error: " << logString << std::endl;
 		delete[] logString;
-		glDeleteProgram(program);
-		program = 0;
+		glDeleteProgram(program->program);
+		program->program = 0;
 		exit(-1);
 	}
 
-	uNormalMat = glGetUniformLocation(program, "normal");
-	uModelViewMat = glGetUniformLocation(program, "modelView");
-	uModelViewProjMat = glGetUniformLocation(program, "modelViewProj");
+	uniform->uNormalMat = glGetUniformLocation(program->program, "normal");
+	uniform->uModelViewMat = glGetUniformLocation(program->program, "modelView");
+	uniform->uModelViewProjMat = glGetUniformLocation(program->program, "modelViewProj");
 
-	inPos = glGetAttribLocation(program, "inPos");
-	inColor = glGetAttribLocation(program, "inColor");
-	inNormal = glGetAttribLocation(program, "inNormal");
-	inTexCoord = glGetAttribLocation(program, "inTexCoord");
+	inPos = glGetAttribLocation(program->program, "inPos");
+	inColor = glGetAttribLocation(program->program, "inColor");
+	inNormal = glGetAttribLocation(program->program, "inNormal");
+	inTexCoord = glGetAttribLocation(program->program, "inTexCoord");
 
 }
 
@@ -264,8 +282,8 @@ void initObj()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleIndexVBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,cubeNTriangleIndex * sizeof(unsigned int) * 3, cubeTriangleIndex,GL_STATIC_DRAW);
 
-	model = glm::mat4(1.0f);
-	m2 = glm::mat4(1.0f);
+	models[0] = glm::mat4(1.0f);
+	models[1] = glm::mat4(1.0f);
 
 }
 
@@ -304,38 +322,29 @@ unsigned int loadTex(const char *fileName){ return 0; }
 
 void renderFunc()
 {
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	for (size_t i = 0; i < programs.size(); i++)
+	{
 	
-	glUseProgram(program);
+		glUseProgram(programs[i].program);
 
-	glm::mat4 modelView = view * model;
-	glm::mat4 modelViewProj = proj * modelView;
-	glm::mat4 normal = glm::transpose(glm::inverse(modelView));
-	if (uModelViewMat != -1)
-		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
-	if (uModelViewProjMat != -1)
-		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
-	if (uNormalMat != -1)
-		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,	&(normal[0][0]));
+		glm::mat4 modelView = view * models[i];
+		glm::mat4 modelViewProj = proj * modelView;
+		glm::mat4 normal = glm::transpose(glm::inverse(modelView));
+		if (uniforms[i].uModelViewMat != -1)
+			glUniformMatrix4fv(uniforms[i].uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
+		if (uniforms[i].uModelViewProjMat != -1)
+			glUniformMatrix4fv(uniforms[i].uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
+		if (uniforms[i].uNormalMat != -1)
+			glUniformMatrix4fv(uniforms[i].uNormalMat, 1, GL_FALSE,	&(normal[0][0]));
 
-	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
-	
-	modelView = view * m2;
-	modelViewProj = proj * modelView;
-	normal = glm::transpose(glm::inverse(modelView));
+		glBindVertexArray(vao);
+		glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 
-
-	if (uModelViewMat != -1)
-		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,&(modelView[0][0]));
-	if (uModelViewProjMat != -1)
-		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,&(modelViewProj[0][0]));
-	if (uNormalMat != -1)
-		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,&(normal[0][0]));
-
-	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
-
+	}
 	glutSwapBuffers();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 void resizeFunc(int width, int height)
 {
@@ -350,21 +359,21 @@ void resizeFunc(int width, int height)
 
 void idleFunc()
 {
-	model = glm::mat4(1.0f);
+	models[0] = glm::mat4(1.0f);
 	static float angle = 0.0f;
 	angle = (angle > 3.141592f * 2.0f) ? 0 : angle + 0.01f;
-	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
+	models[0] = glm::rotate(models[0], angle, glm::vec3(1.0f, 1.0f, 0.0f));
 	glutPostRedisplay();
 
-	m2 = glm::mat4(1.0f);
+	models[1] = glm::mat4(1.0f);
 	//rotacion sobre eje y
-	m2 = glm::rotate(m2, angle, glm::vec3(0, 4, 0));
+	models[1] = glm::rotate(models[1], angle, glm::vec3(0, 4, 0));
 
 	//translacion sobre x para desplazar el cuadrado
-	m2 = glm::translate(m2, glm::vec3(3, 0, 0));
+	models[1] = glm::translate(models[1], glm::vec3(3, 0, 0));
 
 	//rotacion sobre Y para simular la orbitacion del objeto
-	m2 = glm::rotate(m2, angle, glm::vec3(0, 1, 0));
+	models[1] = glm::rotate(models[1], angle, glm::vec3(0, 1, 0));
 
 	glutPostRedisplay();
 }
