@@ -6,6 +6,8 @@ in vec3 color;
 in vec3 pos;
 in vec3 norm;
 in vec2 texCoord;
+in vec3 lPosition;
+in vec3 lIntensity;
 
 uniform sampler2D colorTex;
 uniform sampler2D emiTex;
@@ -21,11 +23,11 @@ float alpha = 1700.0;
 vec3 Ke;
 
 //Propiedades de la luz
-vec3 Ia = vec3 (0.3);
+vec3 Ia = lIntensity;
 vec3 Id = vec3 (1.0,0.0,0.0);
 vec3 Is = vec3 (1.0,0.0,0.0);
-vec3 lpos = vec3 (0.0); 
-//vec3 lpos = (view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+vec3 lpos = lPosition; 
+//vec3 lpos = (view * vec4(lPosition,1.0)).xyz;
 
 vec3 shade();
 

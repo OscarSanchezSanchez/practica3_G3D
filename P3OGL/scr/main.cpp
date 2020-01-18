@@ -1,4 +1,4 @@
-#include "BOX.h"
+﻿#include "BOX.h"
 #include "auxiliar.h"
 
 
@@ -24,10 +24,12 @@ glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
 std::vector<glm::mat4> models(2);
 
-//Traslaci�n por teclado
+//desplazamientos por teclado
 float displacement = 0.1f;
+float displacementLight = 5.0f;
 //Giro de c�mara por teclado
 float yaw_angle = 0.01f;
+
 
 //Movimiento de c�mara con el rat�n
 const float orbitAngle = 0.1f;
@@ -40,6 +42,10 @@ float pitch = 0.0f;
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
+//Texturas  
+unsigned int colorTexId;  
+unsigned int emiTexId;
+
 struct program
 {
 	unsigned int vshader;
@@ -60,6 +66,17 @@ struct uniform
 };
 
 std::vector<uniform> uniforms(2);
+
+//Variables uniformes posición e intesidad de la luz
+int uLightPosition;
+int uLightIntensity;
+
+glm::vec3 lightPosition(0.0f);
+glm::vec3 lightIntensity(0.1f);
+
+//Texturas Uniform  
+int uColorTex;  
+int uEmiTex;
 
 //Atributos
 int inPos;
@@ -82,7 +99,7 @@ unsigned int triangleIndexVBO;
 //////////////////////////////////////////////////////////////
 //!!Por implementar
 
-//Declaraci�n de CB
+//Declaración de CB
 void renderFunc();
 void resizeFunc(int width, int height);
 void idleFunc();
@@ -90,7 +107,7 @@ void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int button, int state, int x, int y);
 void mouseMotionFunc(int x, int y);
 
-//Funciones de inicializaci�n y destrucci�n
+//Funciones de inicialización y destrucción
 void initContext(int argc, char** argv);
 void initOGL();
 void initShader(const char *vname, const char *fname, struct program *program, struct uniform *uniform);
@@ -115,7 +132,7 @@ int main(int argc, char** argv)
 	initContext(argc, argv);
 	initOGL();
 	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag", &programs[0], &uniforms[0]);
-	initShader("../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag", &programs[1], &uniforms[1]);
+	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag", &programs[1], &uniforms[1]);
 
 	initObj();
 
@@ -128,8 +145,8 @@ int main(int argc, char** argv)
 	
 //////////////////////////////////////////
 // Funciones auxiliares 
-void initContext(int argc, char** argv)
-{
+void initContext(int argc, char** argv){
+
 	glutInit(&argc, argv);
 	glutInitContextVersion(3, 3);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
@@ -137,7 +154,7 @@ void initContext(int argc, char** argv)
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(0, 0);
-	glutCreateWindow("Pr�cticas OGL");
+	glutCreateWindow("Prácticas OGL");
 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
@@ -156,9 +173,8 @@ void initContext(int argc, char** argv)
 	glutMotionFunc(mouseMotionFunc);
 
 }
+void initOGL(){
 
-void initOGL()
-{
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
 
@@ -172,7 +188,6 @@ void initOGL()
 	view[3].z = -10.0f;
 
 }
-
 
 void destroy()
 {
@@ -193,6 +208,9 @@ void destroy()
 	if (inTexCoord != -1) glDeleteBuffers(1, &texCoordVBO);
 	glDeleteBuffers(1, &triangleIndexVBO);
 	glDeleteVertexArrays(1, &vao);
+
+	glDeleteTextures(1, &colorTexId);  
+	glDeleteTextures(1, &emiTexId);
 
 }
 
@@ -227,15 +245,29 @@ void initShader(const char *vname, const char *fname, struct program *program, s
 	uniform->uModelViewMat = glGetUniformLocation(program->program, "modelView");
 	uniform->uModelViewProjMat = glGetUniformLocation(program->program, "modelViewProj");
 
+	uColorTex = glGetUniformLocation(program->program, "colorTex");
+	uEmiTex = glGetUniformLocation(program->program, "emiTex");
+
+	uLightPosition = glGetUniformLocation(program->program, "lightPosition");
+	uLightIntensity = glGetUniformLocation(program->program, "lightIntensity");
+
 	inPos = glGetAttribLocation(program->program, "inPos");
 	inColor = glGetAttribLocation(program->program, "inColor");
 	inNormal = glGetAttribLocation(program->program, "inNormal");
 	inTexCoord = glGetAttribLocation(program->program, "inTexCoord");
 
-}
+	glUseProgram(program->program);
+	if (uColorTex != -1) {
+		glUniform1i(uColorTex, 0);
+	}
 
-void initObj()
-{
+	if (uEmiTex != -1) {
+		glUniform1i(uEmiTex, 1);
+	}
+
+}
+void initObj(){
+
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
@@ -251,13 +283,19 @@ void initObj()
 
 	if (inPos != -1)
 	{
+		glGenBuffers(1, &posVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, posVBO);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
+			cubeVertexPos, GL_STATIC_DRAW);
 		glVertexAttribPointer(inPos, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inPos);
 	}
 	if (inColor != -1)
 	{
+		glGenBuffers(1, &colorVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+		glBufferData(GL_ARRAY_BUFFER, cubeNVertex * sizeof(float) * 3,
+			cubeVertexColor, GL_STATIC_DRAW);
 		glVertexAttribPointer(inColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		glEnableVertexAttribArray(inColor);
 	}
@@ -282,25 +320,26 @@ void initObj()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleIndexVBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER,cubeNTriangleIndex * sizeof(unsigned int) * 3, cubeTriangleIndex,GL_STATIC_DRAW);
 
+	colorTexId = loadTex("../img/color2.png");  
+	emiTexId = loadTex("../img/emissive.png");
 	models[0] = glm::mat4(1.0f);
 	models[1] = glm::mat4(1.0f);
 
 }
 
-GLuint loadShader(const char *fileName, GLenum type)
-{ 
+GLuint loadShader(const char *fileName, GLenum type){ 
+
 	unsigned int fileLen;
 	char* source = loadStringFromFile(fileName, fileLen);
 	//////////////////////////////////////////////
-	//Creaci�n y compilaci�n del Shader
+	//Creación y compilación del Shader
 	GLuint shader;
 	shader = glCreateShader(type);
 	glShaderSource(shader, 1, (const GLchar * *)& source, (const GLint*)& fileLen);
 	glCompileShader(shader);
 	delete[] source;
-	
 
-	//Comprobamos que se compil� bien
+	//Comprobamos que se compiló bien
 	GLint compiled;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
 	if (!compiled)
@@ -316,44 +355,90 @@ GLuint loadShader(const char *fileName, GLenum type)
 		glDeleteShader(shader);
 		exit(-1);
 	}
+
 	return shader; 
 }
-unsigned int loadTex(const char *fileName){ return 0; }
+
+unsigned int loadTex(const char *fileName){ 
+	unsigned char* map;  
+	unsigned int w, h;  
+	map = loadTexture(fileName, w, h);
+
+	if (!map) { 
+		std::cout << "Error cargando el fichero: " 
+			<< fileName << std::endl;  
+		exit(-1); 
+	}
+
+	unsigned int texId;  
+	glGenTextures(1, &texId);  
+	glBindTexture(GL_TEXTURE_2D, texId); 
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, 
+		GL_UNSIGNED_BYTE, (GLvoid*)map);
+
+	delete[] map;
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
+		GL_LINEAR_MIPMAP_LINEAR);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);  
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+
+	return texId;
+
+}
 
 void renderFunc()
 {
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	for (size_t i = 0; i < programs.size(); i++)
 	{
-	
 		glUseProgram(programs[i].program);
 
 		glm::mat4 modelView = view * models[i];
 		glm::mat4 modelViewProj = proj * modelView;
 		glm::mat4 normal = glm::transpose(glm::inverse(modelView));
+
 		if (uniforms[i].uModelViewMat != -1)
 			glUniformMatrix4fv(uniforms[i].uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
+
 		if (uniforms[i].uModelViewProjMat != -1)
 			glUniformMatrix4fv(uniforms[i].uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
+
 		if (uniforms[i].uNormalMat != -1)
 			glUniformMatrix4fv(uniforms[i].uNormalMat, 1, GL_FALSE,	&(normal[0][0]));
+
+		if (uLightIntensity != -1)
+			glUniform3fv(uLightIntensity, 1, &lightIntensity[0]);
+
+		if (uLightPosition != -1)
+			glUniform3fv(uLightPosition, 1, &lightPosition[0]);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
 
 	}
+	//Texturas  
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, colorTexId);
+
+	glActiveTexture(GL_TEXTURE0 + 1);
+	glBindTexture(GL_TEXTURE_2D, emiTexId);
+	
+
+	glBindVertexArray(vao);
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+		GL_UNSIGNED_INT, (void*)0);
+
 	glutSwapBuffers();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 void resizeFunc(int width, int height)
 {
-	float aspectRatio = (float)width / (float)height;
-
-	proj = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 50.0f);
-
 	glViewport(0, 0, width, height);
-	
+
 	glutPostRedisplay();
 }
 
@@ -380,69 +465,88 @@ void idleFunc()
 
 void keyboardFunc(unsigned char key, int x, int y)
 {
-	std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
+    std::cout << "Se ha pulsado la tecla " << key << std::endl << std::endl;
 
-	glm::mat4 rotation(1.0f);
+    glm::mat4 rotation(1.0f);
 
-	switch (key)
-	{
-	case 'w':
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, displacement));
+    switch (key)
+    {
+    case 'w':
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, displacement));
+        break;
+    case 's':
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -displacement));
+        break;
+    case 'a':
+        view = glm::translate(view, glm::vec3(displacement, 0.0f, 0.0f));
+        break;
+    case 'd':
+        view = glm::translate(view, glm::vec3(-displacement, 0.0f, 0.0f));
+        break;
+    case 'q':
+        rotation = glm::rotate(rotation, -yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        view = rotation * view;
+        break;
+    case 'e':
+        rotation = glm::rotate(rotation, yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+        view = rotation * view;
+        break;
+    case 'l':
+        lightIntensity = glm::min(lightIntensity + glm::vec3(0.1f), glm::vec3(1.0f));
+        break;
+    case 'm':
+        lightIntensity = glm::min(lightIntensity - glm::vec3(0.1f), glm::vec3(1.0f));
+        break;
+    case 'u':
+        lightPosition.y += displacementLight;
+        break;
+    case 'j':
+        lightPosition.y -= displacementLight;
+        break;
+	case 'h':
+		lightPosition.x += displacementLight;
 		break;
-	case 's':
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -displacement));
+	case 'k':
+		lightPosition.x -= displacementLight;
 		break;
-	case 'a':
-		view = glm::translate(view, glm::vec3(displacement, 0.0f, 0.0f));
-		break;
-	case 'd':
-		view = glm::translate(view, glm::vec3(-displacement, 0.0f, 0.0f));
-		break;
-	case 'q':
-		rotation = glm::rotate(rotation, -yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
-		view = rotation * view;
-		break;
-	case 'e':
-		rotation = glm::rotate(rotation, yaw_angle, glm::vec3(0.0f, 1.0f, 0.0f));
-		view = rotation * view;
-		break;
-	default:
-		break;
-	}
+    default:
+        break;
+    }
 
-	glutPostRedisplay();
+    glutPostRedisplay();
 
 }
 
 void mouseFunc(int button, int state, int x, int y)
 {
-	if (state == 0)
-		std::cout << "Se ha pulsado el boton ";
-	else
-		std::cout << "Se ha soltado el boton ";
+    if (state == 0)
+        std::cout << "Se ha pulsado el boton ";
+    else
+        std::cout << "Se ha soltado el boton ";
 
-	if (button == 0) std::cout << "de la izquierda del raton " << std::endl;
-	if (button == 1) std::cout << "central del raton " << std::endl;
-	if (button == 2) std::cout << "de la derecha del raton " << std::endl;
+    if (button == 0) std::cout << "de la izquierda del raton " << std::endl;
+    if (button == 1) std::cout << "central del raton " << std::endl;
+    if (button == 2) std::cout << "de la derecha del raton " << std::endl;
 
-	std::cout << "en la posicion " << x << " " << y << std::endl << std::endl;
+    std::cout << "en la posicion " << x << " " << y << std::endl << std::endl;
 }
 
 void mouseMotionFunc(int x, int y)
 {
 
-	float xOffset = (float)x - lastX;
-	float yOffset = (float)y - lastY;
+    float xOffset = (float)x - lastX;
+    float yOffset = (float)y - lastY;
 
-	lastX = (float)x;
-	lastY = (float)y;
+    lastX = (float)x;
+    lastY = (float)y;
 
-	yaw += xOffset;
-	pitch += yOffset;
+    yaw += xOffset;
+    pitch += yOffset;
 
-	glm::mat4 rotation(1.0f);
+    glm::mat4 rotation(1.0f);
 
-	view = glm::rotate(view, orbitAngle, glm::vec3(yaw, pitch, 0.0));
+    view = glm::rotate(view, orbitAngle, glm::vec3(yaw, pitch, 0.0));
 
-	glutPostRedisplay();
+    glutPostRedisplay();
 }
+
