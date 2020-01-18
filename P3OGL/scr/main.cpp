@@ -27,6 +27,13 @@ float displacement = 0.1f;
 //Giro de cámara por teclado
 float yaw_angle = 0.01f;
 
+//Movimiento de cámara con el ratón
+const float orbitAngle = 0.1f;
+float lastX = 0.0f;
+float lastY = 0.0f;
+float yaw = 0.0f;
+float pitch = 0.0f;
+
 
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
@@ -67,6 +74,7 @@ void resizeFunc(int width, int height);
 void idleFunc();
 void keyboardFunc(unsigned char key, int x, int y);
 void mouseFunc(int button, int state, int x, int y);
+void mouseMotionFunc(int x, int y);
 
 //Funciones de inicialización y destrucción
 void initContext(int argc, char** argv);
@@ -129,6 +137,7 @@ void initContext(int argc, char** argv)
 	glutIdleFunc(idleFunc);
 	glutKeyboardFunc(keyboardFunc);
 	glutMouseFunc(mouseFunc);
+	glutMotionFunc(mouseMotionFunc);
 
 	
 
@@ -395,13 +404,36 @@ void keyboardFunc(unsigned char key, int x, int y)
 	glutPostRedisplay();
 
 }
-void mouseFunc(int button, int state, int x, int y){}
 
+void mouseFunc(int button, int state, int x, int y)
+{
+	if (state == 0)
+		std::cout << "Se ha pulsado el boton ";
+	else
+		std::cout << "Se ha soltado el boton ";
 
+	if (button == 0) std::cout << "de la izquierda del raton " << std::endl;
+	if (button == 1) std::cout << "central del raton " << std::endl;
+	if (button == 2) std::cout << "de la derecha del raton " << std::endl;
 
+	std::cout << "en la posicion " << x << " " << y << std::endl << std::endl;
+}
 
+void mouseMotionFunc(int x, int y)
+{
 
+	float xOffset = (float)x - lastX;
+	float yOffset = (float)y - lastY;
 
+	lastX = (float)x;
+	lastY = (float)y;
 
+	yaw += xOffset;
+	pitch += yOffset;
 
+	glm::mat4 rotation(1.0f);
 
+	view = glm::rotate(view, orbitAngle, glm::vec3(yaw, pitch, 0.0));
+
+	glutPostRedisplay();
+}
