@@ -35,8 +35,8 @@ float yaw_angle = 0.01f;
 const float orbitAngle = 0.1f;
 float lastX = 0.0f;
 float lastY = 0.0f;
-float yaw = 0.0f;
-float pitch = 0.0f;
+float desplX = 0.0f;
+float desplY = 0.0f;
 
 
 //////////////////////////////////////////////////////////////
@@ -545,12 +545,12 @@ void mouseMotionFunc(int x, int y)
     lastX = (float)x;
     lastY = (float)y;
 
-    yaw += xOffset;
-    pitch += yOffset;
+    desplX += xOffset;
+    desplY += yOffset;
 
     glm::mat4 rotation(1.0f);
 
-    view = glm::rotate(view, orbitAngle, glm::vec3(yaw, pitch, 0.0));
+    view = glm::rotate(view, orbitAngle, glm::vec3(desplY, desplX, 0.0));
 
     glutPostRedisplay();
 }
